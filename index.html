@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Droply</title>
+<style>
+:root{--bg:#ffffff;--text:#111;--muted:#666;--card:#fafafa;--accent:#0070f3;--border:#eaeaea;}
+.dark{--bg:#0b0b0b;--text:#f5f5f5;--muted:#aaa;--card:#121212;--accent:#8ab4ff;--border:#222;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial;}
+.header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);z-index:20}
+.container{max-width:1100px;margin:0 auto;padding:16px}
+.flex{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:700;font-size:20px}
+.search{flex:1;min-width:180px}
+input,select,button,textarea{border:1px solid var(--border);background:var(--card);color:var(--text);padding:10px;border-radius:10px;outline:none}
+button{cursor:pointer}
+.btn{background:var(--accent);color:white;border:none}
+.grid{display:grid;grid-template-columns: repeat(auto-fill, minmax(220px,1fr));gap:16px;margin-top:16px}
+.card{border:1px solid var(--border);border-radius:16px;overflow:hidden;background:var(--card);display:flex;flex-direction:column}
+.card img{width:100%;height:170px;object-fit:cover;background:#ddd}
+.card .p{padding:12px;display:flex;flex:1;flex-direction:column}
+.price{font-weight:700;margin-top:6px}
+.small{font-size:12px;color:var(--muted)}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;border:1px solid var(--border);font-size:12px;margin-top:6px;color:var(--muted)}
+.actions{margin-top:auto;display:flex;gap:8px}
+.iconbtn{display:inline-flex;align-items:center;gap:6px}
+.count-badge{position:relative}
+.count-badge .count{position:absolute;top:-6px;right:-6px;background:#ff3b30;color:#fff;border-radius:999px;font-size:11px;padding:2px 6px}
+.toggle{width:40px;height:40px;display:grid;place-items:center;border-radius:10px;background:var(--card)}
+.drawer{position:fixed;inset:0;display:none}
+.drawer.open{display:block}
+.backdrop{position:absolute;inset:0;background:rgba(0,0,0,.4)}
+.panel{position:absolute;right:0;top:0;bottom:0;width:380px;max-width:92vw;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column}
+.panel header, .panel footer{padding:12px;border-bottom:1px solid var(--border)}
+.panel footer{border-top:1px solid var(--border);border-bottom:none}
+.items{padding:12px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px}
+.cart-item{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:8px;background:var(--card)}
+.cart-item img{width:64px;height:64px;object-fit:cover;border-radius:8px}
+.qty{display:flex;align-items:center;gap:6px}
+.qty button{width:28px;height:28px;border-radius:8px}
+.row{display:flex;justify-content:space-between;margin:6px 0;color:var(--muted)}
+.total{font-weight:800;font-size:18px}
+.coupon{display:flex;gap:8px}
+.notice{font-size:12px;color:var(--muted);margin-top:8px}
+.tag{border:1px dashed var(--border);padding:2px 6px;border-radius:6px;font-size:11px}
+.modal{position:fixed;inset:0;display:none}
+.modal.open{display:block}
+.modal .backdrop{background:rgba(0,0,0,.5)}
+.dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:560px;max-width:95vw;background:var(--bg);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.dialog header, .dialog footer{padding:12px;border-bottom:1px solid var(--border)}
+.dialog footer{border-top:1px solid var(--border);border-bottom:none;display:flex;justify-content:flex-end;gap:8px}
+.dialog .body{padding:12px;display:grid;gap:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.success{padding:10px;background:#00c85322;border:1px solid #00c85355;border-radius:10px;color:#00c853}
+hr{border:none;border-top:1px solid var(--border);margin:10px 0}
+footer.site{margin:40px 0;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="container flex">
+    <div class="brand" id="brand">Droply</div>
+    <input id="search" class="search" placeholder="Search products…"/>
+    <select id="category">
+      <option value="">All categories</option>
+    </select>
+    <select id="sort">
+      <option value="featured">Featured</option>
+      <option value="price-asc">Price: Low to High</option>
+      <option value="price-desc">Price: High to Low</option>
+      <option value="name-asc">Name: A → Z</option>
+    </select>
+    <button id="themeToggle" class="toggle" title="Toggle theme" aria-label="Toggle theme">
+      <span id="themeIcon">🌞</span>
+    </button>
+    <button id="cartBtn" class="iconbtn count-badge btn" aria-label="Open cart">
+      🛒 <span>Cart</span><span class="count" id="cartCount">0</span>
+    </button>
+  </div>
+</header>
+
+<main class="container">
+  <div id="productGrid" class="grid" aria-live="polite"></div>
+  <p class="notice">Tip: coupon codes <span class="tag">WELCOME10</span> (10% off) or <span class="tag">FREESHIP</span> (free shipping).</p>
+</main>
+
+<!-- Cart Drawer -->
+<div id="drawer" class="drawer" role="dialog" aria-modal="true" aria-label="Shopping cart">
+  <div class="backdrop" id="drawerClose"></div>
+  <div class="panel">
+    <header class="flex" style="justify-content:space-between">
+      <strong>🛒 Your Cart</strong>
+      <button id="emptyCart">Empty</button>
+    </header>
+    <div id="cartItems" class="items"></div>
+    <footer>
+      <div class="coupon">
+        <input id="couponInput" placeholder="Coupon code"/>
+        <button id="applyCoupon" class="btn">Apply</button>
+      </div>
+      <div class="row"><span>Subtotal</span><span id="subtotal">₹0</span></div>
+      <div class="row"><span>Shipping</span><span id="shipping">₹0</span></div>
+      <div class="row"><span>Discount</span><span id="discount">- ₹0</span></div>
+      <div class="row total"><span>Total</span><span id="grandTotal">₹0</span></div>
+      <button id="checkout" class="btn" style="width:100%;margin-top:10px">Checkout</button>
+      <p class="notice">Secure checkout via <b>COD / WhatsApp</b> by default. Optional Razorpay supported if you add your key.</p>
+    </footer>
+  </div>
+</div>
+
+<!-- Checkout Modal -->
+<div id="checkoutModal" class="modal" role="dialog" aria-modal="true" aria-label="Checkout form">
+  <div class="backdrop" id="closeCheckout"></div>
+  <div class="dialog">
+    <header class="flex" style="justify-content:space-between">
+      <strong>Checkout</strong>
+      <button id="xCheckout">✖</button>
+    </header>
+    <div class="body">
+      <div class="row2">
+        <div><label>Name<br><input id="c_name" required></label></div>
+        <div><label>Phone<br><input id="c_phone" required></label></div>
+      </div>
+      <label>Address<br><textarea id="c_address" rows="3" required></textarea></label>
+      <div class="row2">
+        <div><label>City<br><input id="c_city" required></label></div>
+        <div><label>Pincode<br><input id="c_pin" required></label></div>
+      </div>
+      <div>
+        <label>Payment Method</label><br>
+        <label><input type="radio" name="pay" value="cod" checked> Cash on Delivery / WhatsApp</label>
+        <label style="margin-left:14px"><input type="radio" name="pay" value="rzp"> Razorpay (card/UPI)</label>
+      </div>
+      <div id="orderSummary"></div>
+      <div id="checkoutMsg" class="success" style="display:none">Order placed! Check your WhatsApp.</div>
+    </div>
+    <footer>
+      <button id="placeOrder" class="btn">Place Order</button>
+      <button id="cancelOrder">Cancel</button>
+    </footer>
+  </div>
+</div>
+
+<footer class="site">
+  <div>© <span id="year"></span> <span id="storeFoot"></span> — built free & fast.</div>
+</footer>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+// ====== CONFIG ======
+const STORE_NAME = "Droply";
+const CURRENCY = "₹";
+const SHIPPING_BASE = 49; // will become 0 if FREESHIP
+const OWNER_WHATSAPP = "918490011123"; // country code + number, e.g. 91xxxxxxxxxx
+const RAZORPAY_KEY = ""; // add your test/live key to enable Razorpay
+
+// Sample products (replace with your niche)
+const PRODUCTS = [
+  {id:1, name:"Wireless Earbuds", price:1299, category:"Electronics", img:"https://images.unsplash.com/photo-1585386959984-a41552231646?q=80&w=800&auto=format&fit=crop"},
+  {id:2, name:"Smart Watch", price:1999, category:"Electronics", img:"https://images.unsplash.com/photo-1517433456452-f9633a875f6f?q=80&w=800&auto=format&fit=crop"},
+  {id:3, name:"Yoga Mat", price:699, category:"Fitness", img:"https://images.unsplash.com/photo-1602322740369-9fc38f1d4a0e?q=80&w=800&auto=format&fit=crop"},
+  {id:4, name:"LED Strip Lights", price:899, category:"Home", img:"https://images.unsplash.com/photo-1599209308942-19e08bde7cda?q=80&w=800&auto=format&fit=crop"},
+  {id:5, name:"Portable Blender", price:1499, category:"Kitchen", img:"https://images.unsplash.com/photo-1629219383387-f09efbe4f518?q=80&w=800&auto=format&fit=crop"},
+  {id:6, name:"Phone Tripod", price:499, category:"Accessories", img:"https://images.unsplash.com/photo-1579508592213-22188d134bc3?q=80&w=800&auto=format&fit=crop"},
+  {id:7, name:"Travel Backpack", price:1799, category:"Fashion", img:"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?q=80&w=800&auto=format&fit=crop"},
+  {id:8, name:"Blue Light Glasses", price:399, category:"Accessories", img:"https://images.unsplash.com/photo-1519681393784-d120267933ba?q=80&w=800&auto=format&fit=crop"}
+];
+
+// ====== STATE ======
+let state = {
+  theme: localStorage.getItem("theme") || "light",
+  cart: JSON.parse(localStorage.getItem("cart")||"[]"),
+  coupon: localStorage.getItem("coupon") || "",
+};
+const el = sel => document.querySelector(sel);
+
+// ====== INIT ======
+document.getElementById("brand").textContent = STORE_NAME;
+document.getElementById("storeFoot").textContent = STORE_NAME;
+document.getElementById("year").textContent = new Date().getFullYear();
+
+// Theme
+function applyTheme(){
+  if(state.theme === "dark"){ document.body.classList.add("dark"); el("#themeIcon").textContent="🌙"; }
+  else { document.body.classList.remove("dark"); el("#themeIcon").textContent="🌞"; }
+  localStorage.setItem("theme", state.theme);
+}
+el("#themeToggle").onclick = ()=>{ state.theme = state.theme==="dark"?"light":"dark"; applyTheme(); }
+applyTheme();
+
+// Categories
+const cats = [...new Set(PRODUCTS.map(p=>p.category))];
+const catSelect = el("#category");
+cats.forEach(c=>{
+  const o = document.createElement("option");
+  o.value=c; o.textContent=c;
+  catSelect.appendChild(o);
+});
+
+// Render products
+function formatCurrency(n){ return CURRENCY + n.toLocaleString("en-IN"); }
+function renderProducts(){
+  const grid = el("#productGrid");
+  const q = el("#search").value.toLowerCase().trim();
+  const cat = catSelect.value;
+  const sort = el("#sort").value;
+  let list = PRODUCTS.filter(p=>{
+    const matchQ = !q || p.name.toLowerCase().includes(q);
+    const matchC = !cat || p.category===cat;
+    return matchQ && matchC;
+  });
+  if(sort==="price-asc") list.sort((a,b)=>a.price-b.price);
+  if(sort==="price-desc") list.sort((a,b)=>b.price-a.price);
+  if(sort==="name-asc") list.sort((a,b)=>a.name.localeCompare(b.name));
+  grid.innerHTML = "";
+  list.forEach(p=>{
+    const card = document.createElement("div");
+    card.className="card";
+    card.innerHTML = `
+      <img src="${p.img}" alt="${p.name}">
+      <div class="p">
+        <div><strong>${p.name}</strong></div>
+        <div class="small">${p.category}</div>
+        <div class="price">${formatCurrency(p.price)}</div>
+        <div class="actions">
+          <button class="btn" data-add="${p.id}">Add to cart</button>
+          <button data-buy="${p.id}">Buy now</button>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+["#search","#category","#sort"].forEach(s=> el(s).addEventListener("input", renderProducts));
+renderProducts();
+
+// Cart helpers
+function saveCart(){ localStorage.setItem("cart", JSON.stringify(state.cart)); updateCartCount(); renderCart(); }
+function updateCartCount(){
+  const count = state.cart.reduce((s,i)=>s+i.qty,0);
+  el("#cartCount").textContent = count;
+}
+function addToCart(id, qty=1){
+  const p = PRODUCTS.find(x=>x.id===id);
+  if(!p) return;
+  const existing = state.cart.find(x=>x.id===id);
+  if(existing) existing.qty += qty;
+  else state.cart.push({id:p.id,name:p.name,price:p.price,img:p.img,qty});
+  saveCart();
+}
+function removeFromCart(id){
+  state.cart = state.cart.filter(x=>x.id!==id);
+  saveCart();
+}
+function changeQty(id, delta){
+  const it = state.cart.find(x=>x.id===id);
+  if(!it) return;
+  it.qty += delta;
+  if(it.qty<=0) removeFromCart(id); else saveCart();
+}
+
+document.addEventListener("click",(e)=>{
+  const add = e.target.closest("[data-add]");
+  const buy = e.target.closest("[data-buy]");
+  const dec = e.target.closest("[data-dec]");
+  const inc = e.target.closest("[data-inc]");
+  const rem = e.target.closest("[data-remove]");
+  if(add){ addToCart(Number(add.getAttribute("data-add"))); toast("Added to cart"); }
+  if(buy){ addToCart(Number(buy.getAttribute("data-buy"))); openDrawer(); openCheckout(); }
+  if(dec){ changeQty(Number(dec.getAttribute("data-dec")), -1); }
+  if(inc){ changeQty(Number(inc.getAttribute("data-inc")), +1); }
+  if(rem){ removeFromCart(Number(rem.getAttribute("data-remove"))); }
+});
+
+// Drawer
+function openDrawer(){ el("#drawer").classList.add("open"); renderCart(); }
+function closeDrawer(){ el("#drawer").classList.remove("open"); }
+el("#cartBtn").onclick = openDrawer;
+el("#drawerClose").onclick = closeDrawer;
+el("#emptyCart").onclick = ()=>{ state.cart=[]; saveCart(); };
+
+// Coupon + totals
+function calcTotals(){
+  const subtotal = state.cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const shipping = state.coupon==="FREESHIP" || subtotal===0 ? 0 : SHIPPING_BASE;
+  let discount = 0;
+  if(state.coupon==="WELCOME10") discount = Math.round(subtotal*0.10);
+  const total = Math.max(0, subtotal + shipping - discount);
+  return {subtotal, shipping, discount, total};
+}
+function renderCart(){
+  const wrap = el("#cartItems");
+  if(state.cart.length===0){ wrap.innerHTML = `<p class="small">Your cart is empty.</p>`; }
+  else {
+    wrap.innerHTML = "";
+    state.cart.forEach(i=>{
+      const item = document.createElement("div");
+      item.className="cart-item";
+      item.innerHTML = `
+        <img src="${i.img}" alt="${i.name}">
+        <div>
+          <div><strong>${i.name}</strong></div>
+          <div class="small">${formatCurrency(i.price)}</div>
+          <div class="qty" style="margin-top:6px">
+            <button data-dec="${i.id}">-</button>
+            <span>${i.qty}</span>
+            <button data-inc="${i.id}">+</button>
+            <button data-remove="${i.id}" style="margin-left:8px">Remove</button>
+          </div>
+        </div>
+        <div style="font-weight:700">${formatCurrency(i.price*i.qty)}</div>
+      `;
+      wrap.appendChild(item);
+    });
+  }
+  const t = calcTotals();
+  el("#subtotal").textContent = formatCurrency(t.subtotal);
+  el("#shipping").textContent = formatCurrency(t.shipping);
+  el("#discount").textContent = "- " + formatCurrency(t.discount);
+  el("#grandTotal").textContent = formatCurrency(t.total);
+  el("#couponInput").value = state.coupon || "";
+}
+el("#applyCoupon").onclick = ()=>{
+  const c = el("#couponInput").value.trim().toUpperCase();
+  if(["WELCOME10","FREESHIP",""].includes(c)){
+    state.coupon = c; localStorage.setItem("coupon", c); renderCart();
+    toast(c? `Coupon ${c} applied` : "Coupon cleared");
+  } else toast("Invalid coupon");
+};
+updateCartCount(); renderCart();
+
+// Checkout
+function openCheckout(){
+  if(state.cart.length===0){ toast("Add items first"); return; }
+  el("#checkoutModal").classList.add("open");
+  const t = calcTotals();
+  el("#orderSummary").innerHTML = `
+    <hr>
+    <div><strong>Order Summary</strong></div>
+    <div class="row"><span>Items</span><span>${state.cart.reduce((s,i)=>s+i.qty,0)}</span></div>
+    <div class="row"><span>Subtotal</span><span>${formatCurrency(t.subtotal)}</span></div>
+    <div class="row"><span>Shipping</span><span>${formatCurrency(t.shipping)}</span></div>
+    <div class="row total"><span>Total</span><span>${formatCurrency(t.total)}</span></div>
+    <div class="small">By placing an order you agree to our Terms & Refund Policy.</div>
+  `;
+}
+function closeCheckout(){ el("#checkoutModal").classList.remove("open"); }
+el("#checkout").onclick = openCheckout;
+el("#closeCheckout").onclick = closeCheckout;
+el("#xCheckout").onclick = closeCheckout;
+el("#cancelOrder").onclick = closeCheckout;
+
+function currentPayMethod(){ return document.querySelector('input[name="pay"]:checked').value; }
+
+el("#placeOrder").onclick = async ()=>{
+  const name = el("#c_name").value.trim();
+  const phone = el("#c_phone").value.trim();
+  const address = el("#c_address").value.trim();
+  const city = el("#c_city").value.trim();
+  const pin = el("#c_pin").value.trim();
+  if(!name || !phone || !address || !city || !pin){ toast("Please fill shipping details"); return; }
+  const totals = calcTotals();
+  const order = {
+    id: "ORD" + Date.now(),
+    items: state.cart.map(i=>({id:i.id,name:i.name,price:i.price,qty:i.qty})),
+    totals,
+    customer: {name,phone,address,city,pin},
+    coupon: state.coupon || null,
+    createdAt: new Date().toISOString()
+  };
+  const pm = currentPayMethod();
+  if(pm==="cod"){ await placeCOD(order); }
+  if(pm==="rzp"){ await placeRazorpay(order); }
+};
+
+async function placeCOD(order){
+  const hist = JSON.parse(localStorage.getItem("orders")||"[]");
+  hist.push(order);
+  localStorage.setItem("orders", JSON.stringify(hist));
+  const lines = [];
+  lines.push(`New COD Order ${order.id}`);
+  order.items.forEach(i=> lines.push(`• ${i.name} x${i.qty} = ${formatCurrency(i.price*i.qty)}`));
+  lines.push(`Subtotal: ${formatCurrency(order.totals.subtotal)}`);
+  lines.push(`Shipping: ${formatCurrency(order.totals.shipping)}`);
+  lines.push(`Discount: ${formatCurrency(order.totals.discount)}`);
+  lines.push(`Total: ${formatCurrency(order.totals.total)}`);
+  lines.push(`Customer: ${order.customer.name}, ${order.customer.phone}`);
+  lines.push(`${order.customer.address}, ${order.customer.city} - ${order.customer.pin}`);
+  const wa = `https://wa.me/${OWNER_WHATSAPP}?text=${encodeURIComponent(lines.join("\n"))}`;
+  window.open(wa, "_blank");
+  document.getElementById("checkoutMsg").style.display="block";
+  state.cart=[]; saveCart(); renderCart();
+  setTimeout(()=>{ closeCheckout(); closeDrawer(); }, 600);
+  toast("Order created 🎉");
+}
+
+async function placeRazorpay(order){
+  if(!RAZORPAY_KEY){ toast("Add your Razorpay key first"); return; }
+  const options = {
+    key: RAZORPAY_KEY,
+    amount: order.totals.total*100,
+    currency: "INR",
+    name: STORE_NAME,
+    description: "Order " + order.id,
+    prefill: { name: order.customer.name, contact: order.customer.phone },
+    notes: { address: `${order.customer.address}, ${order.customer.city} - ${order.customer.pin}` },
+    handler: function (response){
+      const hist = JSON.parse(localStorage.getItem("orders")||"[]");
+      hist.push({...order, payment:{gateway:"razorpay", ...response}});
+      localStorage.setItem("orders", JSON.stringify(hist));
+      document.getElementById("checkoutMsg").style.display="block";
+      state.cart=[]; saveCart(); renderCart();
+      setTimeout(()=>{ closeCheckout(); closeDrawer(); }, 600);
+      toast("Payment success ✅");
+    },
+    modal: { ondismiss(){ toast("Payment cancelled"); } },
+    theme: { color: "#3399cc" }
+  };
+  const rzp = new window.Razorpay(options);
+  rzp.open();
+}
+
+// Quick utils
+function toast(msg){
+  let t = document.getElementById("toast");
+  if(!t){
+    t = document.createElement("div");
+    t.id="toast";
+    Object.assign(t.style,{
+      position:"fixed",bottom:"16px",left:"50%",transform:"translateX(-50%)",
+      background:"var(--text)",color:"var(--bg)",padding:"10px 14px",borderRadius:"10px",
+      zIndex:9999,boxShadow:"0 8px 30px rgba(0,0,0,.25)",opacity:"0",transition:"opacity .2s"
+    });
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity="1";
+  setTimeout(()=> t.style.opacity="0", 1500);
+}
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape"){ document.getElementById("drawer").classList.remove("open"); document.getElementById("checkoutModal").classList.remove("open"); }});
+</script>
+</body>
+</html>
