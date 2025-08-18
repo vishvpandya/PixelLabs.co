@@ -91,6 +91,15 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
   color:#fff;width:36px;height:36px;border-radius:999px;display:grid;place-items:center
 }
 .navbtn.left{left:8px} .navbtn.right{right:8px}
+/* Back button inside product modal image */
+.backbtn{
+  position:absolute; top:10px; left:10px;
+  width:36px; height:36px; border:none; border-radius:999px;
+  display:grid; place-items:center; background:rgba(0,0,0,.5);
+  color:#fff; font-size:18px; line-height:1; cursor:pointer; z-index:3;
+}
+.backbtn:focus-visible{outline:2px solid #fff; outline-offset:2px;}
+
 .thumbs{display:flex;gap:8px;overflow:auto;padding-bottom:4px}
 .thumbs img{
   width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid transparent;cursor:pointer;background:#eee
@@ -106,14 +115,10 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
 .titlelg{font-size:28px;font-weight:800;line-height:1.25}
 
 /* ====== RESPONSIVE: comfortable on phones, tablets, laptops ====== */
-
-/* Tablet down: give modal a bit more room and taller gallery */
 @media (max-width: 1024px){
   .dialog{width:92vw;max-width:92vw}
   .gallery .main{height:56vh}
 }
-
-/* Phones: full-screen modal; stack content; inputs/cards comfy */
 @media (max-width: 768px){
   .container{padding:12px}
   .flex{gap:8px}
@@ -586,6 +591,7 @@ function openProduct(id){
   const html = `
     <div class="gallery">
       <div class="main">
+        <button class="backbtn" id="pm_back" aria-label="Back">←</button>
         <img id="pm_main" src="${cover(p)}" alt="${p.name}">
         <button class="navbtn left" id="pm_prev">‹</button>
         <button class="navbtn right" id="pm_next">›</button>
@@ -628,6 +634,8 @@ function openProduct(id){
       else { await navigator.clipboard.writeText(text); toast("Copied to clipboard"); }
     } catch(_){}
   };
+  // NEW: back button closes the product modal
+  el("#pm_back").onclick = closeProduct;
 
   el("#productModal").classList.add("open");
 }
