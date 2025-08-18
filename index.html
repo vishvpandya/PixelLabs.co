@@ -60,7 +60,7 @@ button{cursor:pointer}
 .panel footer{border-top:1px solid var(--border);border-bottom:none}
 .items{padding:12px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:10px}
 .cart-item{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;border:1px solid var(--border);border-radius:12px;padding:8px;background:var(--card)}
-.cart-item img{width:64px;height:70px;object-fit:center;border-radius:8px}
+.cart-item img{width:64px;height:70px;object-fit:cover;border-radius:8px}
 .qty{display:flex;align-items:center;gap:6px}
 .qty button{width:28px;height:28px;border-radius:8px}
 .row{display:flex;justify-content:space-between;margin:6px 0;color:var(--muted)}
@@ -85,7 +85,7 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
 .gallery .main{
   position:relative;background:#ddd;border-radius:12px;overflow:hidden;height:420px;display:grid;place-items:center
 }
-.gallery .main img{width:75%;height:100%;object-fit:cover}
+.gallery .main img{width:50%;height:100%;object-fit:contain}
 .navbtn{
   position:absolute;top:50%;transform:translateY(-50%);border:none;background:rgba(0,0,0,.35);
   color:#fff;width:36px;height:36px;border-radius:999px;display:grid;place-items:center
@@ -104,6 +104,52 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
 .whatsapp{background:#1c1c1c;color:#fff;border:none;border-radius:10px;padding:12px 16px}
 .sharebtn{width:40px;height:40px;border-radius:10px;border:1px solid var(--border);background:var(--card)}
 .titlelg{font-size:28px;font-weight:800;line-height:1.25}
+
+/* ====== RESPONSIVE: comfortable on phones, tablets, laptops ====== */
+
+/* Tablet down: give modal a bit more room and taller gallery */
+@media (max-width: 1024px){
+  .dialog{width:92vw;max-width:92vw}
+  .gallery .main{height:56vh}
+}
+
+/* Phones: full-screen modal; stack content; inputs/cards comfy */
+@media (max-width: 768px){
+  .container{padding:12px}
+  .flex{gap:8px}
+  .brand{flex:1}
+  /* Controls wrap to full width rows */
+  .search, #category, #sort, #themeToggle, #cartBtn{flex:1 1 10%}
+  .search{min-width:0}
+
+  /* Modal becomes full-screen and scrollable */
+  .dialog{
+    left:0; top:0; transform:none;
+    width:100vw; max-width:100vw; height:100vh;
+    border-radius:0; border-left:none; border-right:none;
+  }
+  .dialog header{position:sticky;top:0;background:var(--bg);z-index:2}
+  .dialog .body{height:calc(100vh - 56px);overflow:auto;padding-bottom:12px}
+
+  /* Stack gallery above details for comfort on narrow screens */
+  #pm_body{display:grid;grid-template-columns:1fr;gap:16px}
+  .gallery .main{height:54vh}
+  .thumbs img{width:70px;height:70px}
+
+  /* Buttons easier to tap */
+  .pactions{flex-direction:column}
+  .btn,.whatsapp{width:100%}
+  .titlelg{font-size:24px}
+  .card img{height:200px}
+}
+
+/* Very small phones */
+@media (max-width: 420px){
+  .brand .name{font-size:18px}
+  .thumbs img{width:64px;height:64px}
+  .titlelg{font-size:22px}
+  .card img{height:180px}
+}
 </style>
 </head>
 <body>
@@ -195,7 +241,7 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
   </div>
 </div>
 
-<!-- Product Modal (NEW) -->
+<!-- Product Modal -->
 <div id="productModal" class="modal" role="dialog" aria-modal="true" aria-label="Product details">
   <div class="backdrop" id="closeProduct"></div>
   <div class="dialog">
@@ -204,9 +250,7 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
       <button id="xProduct">✖</button>
     </header>
     <div class="body">
-      <div class="row2" id="pm_body">
-        <!-- left: gallery / right: details; filled by JS -->
-      </div>
+      <div class="row2" id="pm_body"></div>
     </div>
   </div>
 </div>
@@ -224,10 +268,7 @@ const SHIPPING_BASE = 49; // 0 if FREESHIP
 const OWNER_WHATSAPP = "918490011123";
 const RAZORPAY_KEY = "";
 
-/* ========= PRODUCTS =========
-   Replace images arrays with your own photo URLs.
-   The FIRST image becomes the card cover automatically.
-*/
+/* ========= PRODUCTS ========= */
 const PRODUCTS = [
   {
     id:1,
@@ -236,7 +277,6 @@ const PRODUCTS = [
     stock:99,
     category:"Watch",
     images:[
-      // sample set — REPLACE with your uploads
       "WhatsApp Image 2025-08-18 at 16.53.23_f677067d.jpg",
       "WhatsApp Image 2025-08-18 at 16.53.24_9a088815.jpg",
       "WhatsApp Image 2025-08-18 at 16.53.23_f677067d.jpg",
@@ -284,8 +324,8 @@ const PRODUCTS = [
 let state = {
   theme: localStorage.getItem("theme") || "light",
   cart: JSON.parse(localStorage.getItem("cart")||"[]"),
-  coupon: localStorage.getItem("coupon") || "",
-  viewing: null, // product currently open in modal
+  coupon: JSON.parse(JSON.stringify(localStorage.getItem("coupon") || "")),
+  viewing: null,
   imgIndex: 0
 };
 const el = sel => document.querySelector(sel);
@@ -354,10 +394,7 @@ renderProducts();
 
 // Cart helpers
 function saveCart(){ localStorage.setItem("cart", JSON.stringify(state.cart)); updateCartCount(); renderCart(); }
-function updateCartCount(){
-  const count = state.cart.reduce((s,i)=>s+i.qty,0);
-  el("#cartCount").textContent = count;
-}
+function updateCartCount(){ const count = state.cart.reduce((s,i)=>s+i.qty,0); el("#cartCount").textContent = count; }
 function addToCart(id, qty=1){
   const p = PRODUCTS.find(x=>x.id===id);
   if(!p) return;
@@ -366,10 +403,7 @@ function addToCart(id, qty=1){
   else state.cart.push({id:p.id,name:p.name,price:p.price,img:cover(p),qty});
   saveCart();
 }
-function removeFromCart(id){
-  state.cart = state.cart.filter(x=>x.id!==id);
-  saveCart();
-}
+function removeFromCart(id){ state.cart = state.cart.filter(x=>x.id!==id); saveCart(); }
 function changeQty(id, delta){
   const it = state.cart.find(x=>x.id===id);
   if(!it) return;
@@ -608,9 +642,7 @@ function navImage(step){
 function updateMainImage(){
   const imgs = state.viewing.images||[];
   el("#pm_main").src = imgs[state.imgIndex] || cover(state.viewing);
-  document.querySelectorAll("#pm_thumbs img").forEach((im,i)=>{
-    im.classList.toggle("active", i===state.imgIndex);
-  });
+  document.querySelectorAll("#pm_thumbs img").forEach((im,i)=> im.classList.toggle("active", i===state.imgIndex));
 }
 
 el("#closeProduct").onclick = closeProduct;
@@ -642,5 +674,3 @@ document.addEventListener("keydown",(e)=>{
 </script>
 </body>
 </html>
-
-
