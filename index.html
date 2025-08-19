@@ -74,7 +74,7 @@ button{cursor:pointer}
 .dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:960px;max-width:95vw;background:var(--bg);border:1px solid var(--border);border-radius:16px;overflow:hidden}
 .dialog header, .dialog footer{padding:12px;border-bottom:1px solid var(--border)}
 .dialog footer{border-top:1px solid var(--border);border-bottom:none;display:flex;justify-content:flex-end;gap:8px}
-.dialog .body{padding:12px}
+.dialog .body{padding:50px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .success{padding:10px;background:#00c85322;border:1px solid #00c85355;border-radius:10px;color:#00c853}
 hr{border:none;border-top:1px solid var(--border);margin:10px 0}
@@ -134,7 +134,7 @@ footer.site{margin:40px 0;color:var(--muted);text-align:center}
     border-radius:0; border-left:none; border-right:none;
   }
   .dialog header{position:sticky;top:0;background:var(--bg);z-index:2}
-  .dialog .body{height:calc(100vh - 56px);overflow:auto;padding-bottom:12px}
+  .dialog .body{height:calc(100`vh - 56px);overflow:auto;padding-bottom:12px}
 
   /* Stack gallery above details for comfort on narrow screens */
   #pm_body{display:grid;grid-template-columns:1fr;gap:16px}
@@ -682,4 +682,5 @@ document.addEventListener("keydown",(e)=>{
 </script>
 </body>
 </html>
+
 
