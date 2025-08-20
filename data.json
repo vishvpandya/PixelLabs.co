@@ -65,6 +65,16 @@
         "WhatsApp Image 2025-08-18 at 16.53.24_9a088815.jpg",
         "WhatsApp Image 2025-08-18 at 16.53.24_e630e59d.jpg"
       ]
+    },
+    {
+      "id": 972021610,
+      "name": "my new t shirt and",
+      "price": 12222,
+      "stock": 10,
+      "category": "clothes ",
+      "images": [
+        "assets/whatsapp-image-2025-08-18-at-15.02.13_a16e9b37.jpg"
+      ]
     }
   ]
 }
