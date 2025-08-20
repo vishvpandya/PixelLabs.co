@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PixelLabs Editor</title>
+<style>
+  :root{--bg:#F4F1E8;--text:#1F2E27;--muted:#5E6B66;--card:#FBF8F1;--accent:#B5965C;--border:#E5DFD2}
+  .dark{--bg:#0F1412;--text:#EDEBE6;--muted:#A7B0AB;--card:#171D1A;--accent:#B5965C;--border:#26302B}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
+  .container{max-width:1000px;margin:0 auto;padding:16px}
+  .header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border);backdrop-filter:blur(8px);z-index:10}
+  .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+  label{font-size:12px;color:var(--muted);display:block;margin-bottom:6px}
+  input, textarea, select{width:100%;background:var(--card);border:1px solid var(--border);border-radius:12px;color:var(--text);padding:10px}
+  textarea{min-height:90px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:16px}
+  .btn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:var(--accent);color:#fff;padding:10px 14px;border-radius:12px}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:700px){.row{grid-template-columns:1fr}}
+  .list{display:flex;flex-direction:column;gap:10px}
+  img{max-width:100%;border-radius:12px}
+  .pill{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="container" style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+    <strong>PixelLabs — Editor</strong>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="btnLoad">Load from data.json</button>
+      <button class="btn" id="btnSave">Save draft (device)</button>
+      <button class="btn" id="btnPublish">Publish to GitHub</button>
+    </div>
+  </div>
+</header>
+
+<main class="container" style="padding-top:18px">
+  <div class="grid">
+    <section class="card">
+      <h3>Store settings</h3>
+      <div class="row">
+        <div><label>Store name<input id="store_name" placeholder="PixelLabs"/></label></div>
+        <div><label>Owner WhatsApp (digits only, with country code)<input id="owner_whatsapp" placeholder="918490011123"/></label></div>
+      </div>
+      <div class="row">
+        <div><label>Shipping base (₹)<input id="shipping_base" type="number" inputmode="numeric" placeholder="49"/></label></div>
+        <div><label>Razorpay key<input id="razorpay_key" placeholder=""/></label></div>
+      </div>
+      <div class="row" style="align-items:end">
+        <div><label>Logo URL<input id="logo" placeholder="logo.jpg"/></label></div>
+        <div><label>Upload logo<input type="file" id="logoUpload" accept="image/*"/></label></div>
+      </div>
+    </section>
+
+    <aside class="card">
+      <h3>GitHub publish</h3>
+      <p class="pill">Owner sets this once. Client just edits & taps Publish.</p>
+      <div class="list">
+        <div><label>Repo (owner/name)<input id="repo" placeholder="vishvpandya/PixelLabs.co"/></label></div>
+        <div class="row"><div><label>Branch<input id="branch" placeholder="main"/></label></div><div><label>Site folder<input id="rootPath" placeholder=""/></label></div></div>
+        <div><label>Fine-grained PAT (contents:write)<input id="token" type="password" placeholder="ghp_…"/></label></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="btnRemember">Remember</button><button class="btn" id="btnForget">Forget</button></div>
+      </div>
+    </aside>
+  </div>
+
+  <section class="card" style="margin-top:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <h3 style="margin:0">Products</h3>
+      <button class="btn" id="btnAdd">+ Add product</button>
+    </div>
+    <div id="items" class="list" style="margin-top:10px"></div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h3>Preview (matches live layout)</h3>
+    <iframe id="preview" style="width:100%;height:560px;border:1px solid var(--border);border-radius:12px"></iframe>
+  </section>
+</main>
+
+<script>
+const state={ site:{store_name:'PixelLabs',owner_whatsapp:'',shipping_base:49,razorpay_key:'',logo:'logo.jpg'}, products:[] };
+const els={ items:qs('#items'), preview:qs('#preview'), repo:qs('#repo'), branch:qs('#branch'), token:qs('#token'), rootPath:qs('#rootPath'), store_name:qs('#store_name'), owner_whatsapp:qs('#owner_whatsapp'), shipping_base:qs('#shipping_base'), razorpay_key:qs('#razorpay_key'), logo:qs('#logo'), logoUpload:qs('#logoUpload') };
+function qs(s){return document.querySelector(s)}
+function uid(){return Math.floor(Math.random()*1e9)}
+
+function saveDraft(){ localStorage.setItem('pxl_draft', JSON.stringify(state)); alert('Saved draft on this device.'); }
+function loadDraft(){ const raw=localStorage.getItem('pxl_draft'); if(raw){ Object.assign(state, JSON.parse(raw)); applyState(); } }
+function rememberCreds(){ localStorage.setItem('pxl_creds', JSON.stringify({repo:els.repo.value, branch:els.branch.value||'main', token:els.token.value, rootPath:els.rootPath.value||''})); alert('Saved repo settings.'); }
+function loadCreds(){ const raw=localStorage.getItem('pxl_creds'); if(raw){ const c=JSON.parse(raw); els.repo.value=c.repo||''; els.branch.value=c.branch||'main'; els.token.value=c.token||''; els.rootPath.value=c.rootPath||''; } }
+function forgetCreds(){ localStorage.removeItem('pxl_creds'); els.token.value=''; alert('Cleared saved settings.'); }
+
+['input','change'].forEach(evt=>{
+  els.store_name.addEventListener(evt, syncSite);
+  els.owner_whatsapp.addEventListener(evt, syncSite);
+  els.shipping_base.addEventListener(evt, syncSite);
+  els.razorpay_key.addEventListener(evt, syncSite);
+  els.logo.addEventListener(evt, syncSite);
+});
+els.logoUpload.addEventListener('change', async (e)=>{ const f=e.target.files[0]; if(!f) return; state.site.logo='assets/'+fileSafe(f.name); updatePreview(); });
+
+qs('#btnAdd').addEventListener('click',()=>{ const p={id:uid(),name:'New product',price:0,stock:10,category:'',images:[]}; state.products.push(p); renderProducts(); updatePreview(); });
+qs('#btnSave').addEventListener('click', saveDraft);
+qs('#btnRemember').addEventListener('click', rememberCreds);
+qs('#btnForget').addEventListener('click', forgetCreds);
+qs('#btnLoad').addEventListener('click', async()=>{ try{ const r=await fetch('data.json?cache='+Date.now()); const d=await r.json(); Object.assign(state, d); applyState(); alert('Loaded from data.json'); }catch(e){ alert('Could not load data.json'); } });
+qs('#btnPublish').addEventListener('click', publish);
+
+function syncSite(){ state.site.store_name=els.store_name.value; state.site.owner_whatsapp=els.owner_whatsapp.value; state.site.shipping_base=Number(els.shipping_base.value||0); state.site.razorpay_key=els.razorpay_key.value; state.site.logo=els.logo.value; updatePreview(); }
+function fileSafe(n){ return n.toLowerCase().replace(/[^a-z0-9._-]+/g,'-').replace(/^-+|-+$/g,''); }
+
+function renderProducts(){ els.items.innerHTML=''; state.products.forEach(p=>{ const wrap=document.createElement('div'); wrap.className='card'; wrap.innerHTML=`
+  <div class="row"><div><label>Name<input data-k="name" value="${esc(p.name)}"/></label></div><div><label>Price (₹)<input data-k="price" value="${p.price}" inputmode="decimal"/></label></div></div>
+  <div class="row"><div><label>Category<input data-k="category" value="${esc(p.category||'')}"/></label></div><div><label>Stock<input data-k="stock" value="${p.stock||0}" inputmode="numeric"/></label></div></div>
+  <div><label>Images (comma-separated URLs)<textarea data-k="imagesTxt">${esc((p.images||[]).join(', '))}</textarea></label></div>
+  <div class="row" style="align-items:end"><div><label>Upload image<input type="file" data-k="upload" accept="image/*"/></label></div><div style="text-align:right"><button class="btn" data-act="dup">Duplicate</button> <button class="btn" data-act="del">Delete</button></div></div>`;
+  wrap.querySelectorAll('input,textarea').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const k=inp.dataset.k;
+      if(k==='imagesTxt'){ p.images=inp.value.split(',').map(s=>s.trim()).filter(Boolean); }
+      else if(k==='price'||k==='stock'){ p[k]=Number(inp.value||0); }
+      else if(k!=='upload'){ p[k]=inp.value; }
+      updatePreview();
+    });
+    if(inp.type==='file'){
+      inp.addEventListener('change', async()=>{
+        const f=inp.files[0]; if(!f) return;
+        const path='assets/'+fileSafe(f.name);
+        p.images = Array.from(new Set([...(p.images||[]), path]));
+        updatePreview();
+      });
+    }
+  });
+  wrap.addEventListener('click',(ev)=>{
+    const act=ev.target.dataset.act; if(!act) return;
+    if(act==='del'){ state.products=state.products.filter(x=>x!==p); renderProducts(); updatePreview(); }
+    if(act==='dup'){ const c=JSON.parse(JSON.stringify(p)); c.id=uid(); c.name=p.name+' (copy)'; state.products.push(c); renderProducts(); updatePreview(); }
+  });
+  els.items.appendChild(wrap); }); }
+
+function applyState(){ els.store_name.value=state.site.store_name||''; els.owner_whatsapp.value=state.site.owner_whatsapp||''; els.shipping_base.value=state.site.shipping_base||0; els.razorpay_key.value=state.site.razorpay_key||''; els.logo.value=state.site.logo||''; renderProducts(); updatePreview(); }
+
+function updatePreview(){
+  const css=`<style>${document.querySelector('style').innerHTML}</style>`;
+  const cards = (state.products||[]).map(p=>`<div class='card'><img src='${(p.images&&p.images[0])||''}' style='width:100%;height:170px;object-fit:cover;background:#ddd'><div class='p'><div><strong>${esc(p.name)}</strong></div><div class='small'>${esc(p.category||'')}</div><div class='price'>₹${Number(p.price||0).toLocaleString('en-IN')}</div><div class='actions'><button class='btn'>Add to cart</button><button>Buy now</button><button>View</button></div></div></div>`).join('');
+  const html = `<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>${css}</head><body><header class='header'><div class='container flex'><div class='brand'><img src='${esc(state.site.logo||'logo.jpg')}' class='logo'><span class='name'>${esc(state.site.store_name||'PixelLabs')}<span class='co'>.CO</span></span></div></div></header><main class='container'><div class='grid'>${cards}</div></main></body></html>`;
+  const blob=new Blob([html],{type:'text/html'}); els.preview.src=URL.createObjectURL(blob);
+}
+
+async function gatherFiles(){ const files=[]; files.push({path:'data.json', content:b64(JSON.stringify(state,null,2))}); const fileInputs=document.querySelectorAll('input[type=file]'); for(const inp of fileInputs){ if(inp.files&&inp.files[0]){ const f=inp.files[0]; const arr=new Uint8Array(await f.arrayBuffer()); files.push({path:'assets/'+fileSafe(f.name), content:b64Bytes(arr)}); } } return files; }
+function b64(str){ return btoa(unescape(encodeURIComponent(str))); }
+function b64Bytes(u8){ let s=''; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]); return btoa(s); }
+
+async function publish(){ const repoFull=els.repo.value.trim(); const branch=(els.branch.value||'main').trim(); const token=els.token.value.trim(); const root=els.rootPath.value.trim(); if(!repoFull||!token){ alert('Set Repo and Token first.'); return; } const [owner,repo]=repoFull.split('/'); const base=`https://api.github.com/repos/${owner}/${repo}/contents/`; const files=await gatherFiles(); for(const f of files){ const path=(root? (root.replace(/\/?$/,'/')+f.path):f.path); let sha; try{ const meta=await fetch(base+encodeURIComponent(path)+`?ref=${encodeURIComponent(branch)}`,{headers:{Authorization:`Bearer ${token}`}}); if(meta.status===200){ const j=await meta.json(); sha=j.sha; } }catch(e){}
+  const res=await fetch(base+encodeURIComponent(path),{method:'PUT', headers:{'Authorization':`Bearer ${token}`,'Content-Type':'application/json'}, body:JSON.stringify({message:`chore: update ${f.path} via inline editor`, content:f.content, branch, sha})}); if(!res.ok){ const t=await res.text(); alert('Failed on '+path+'\n'+t); throw new Error(t);} }
+  alert('Published! Site will update after GitHub Pages refreshes.'); }
+
+function esc(s){return (s||'').replace(/[&<>\"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+
+loadCreds(); loadDraft(); fetch('data.json').then(r=>r.ok?r.json():null).then(d=>{ if(d){ Object.assign(state,d); applyState(); } else { applyState(); } });
+</script>
+</body>
+</html>
