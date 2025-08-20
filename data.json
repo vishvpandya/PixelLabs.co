@@ -69,12 +69,16 @@
     {
       "id": 972021610,
       "name": "my new t shirt and",
-      "price": 12222,
+      "price": 12222555555555,
       "stock": 10,
       "category": "clothes ",
       "images": [
-        "assets/whatsapp-image-2025-08-18-at-15.02.13_a16e9b37.jpg"
+        "assets/whatsapp-image-2025-08-18-at-15.02.13_a16e9b37.jpg",
+        "assets/my-room-image.png"
       ]
     }
-  ]
+  ],
+  "_uploads": {
+    "assets/my-room-image.png": {}
+  }
 }
