@@ -51,6 +51,17 @@
         "this is my best watch",
         "assets/whatsapp-image-2025-08-18-at-16.53.25_2c423782.jpg"
       ]
+    },
+    {
+      "id": 958102100,
+      "name": "my new t shirt and pentsssss",
+      "price": 12222,
+      "stock": 10,
+      "category": "clothes ",
+      "images": [
+        "my best product ever",
+        "assets/my-room-image.png"
+      ]
     }
   ]
 }
