@@ -43,12 +43,11 @@
     },
     {
       "id": 146314985,
-      "name": "New product my watch ",
+      "name": "New product my watch ,this is my best watch,",
       "price": 140000,
       "stock": 10000,
       "category": "watch ",
       "images": [
-        "this is my best watch",
         "assets/whatsapp-image-2025-08-18-at-16.53.25_2c423782.jpg"
       ]
     },
@@ -59,8 +58,7 @@
       "stock": 10,
       "category": "clothes ",
       "images": [
-        "my best product ever",
-        "assets/my-room-image.png"
+        "assets/whatsapp-image-2025-08-18-at-16.54.24_85748ece.jpg"
       ]
     }
   ]
